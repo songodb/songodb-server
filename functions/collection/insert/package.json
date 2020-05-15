@@ -1,0 +1,33 @@
+{
+  "name": "songodb-server-collection-insert",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "package": "package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/songodb/songodb-server.git"
+  },
+  "author": "Daniel Jhin Yoo <danieljyoo@gmail.com> (https://github.com/danieljyoo)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/songodb/songodb-server/issues"
+  },
+  "homepage": "https://github.com/songodb/songodb-server#readme",
+  "dependencies": {
+    "@songodb/songodb-s3": "^1.0.0",
+    "uuid": "^3.4.0"
+  },
+  "devDependencies": {
+    "@funcmaticjs/package": "~0.0.3",
+    "aws-sdk": "^2.606.0",
+    "dotenv": "^8.2.0",
+    "jest": "^24.9.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}

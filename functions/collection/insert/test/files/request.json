@@ -1,0 +1,52 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /{apikey}/{db}/{collection}",
+  "rawPath": "/somekey/somedb/somecollection",
+  "rawQueryString": "myparam=myvalue",
+  "headers": {
+      "accept": "*/*",
+      "accept-encoding": "gzip, deflate, br",
+      "accept-language": "en-US,en;q=0.9",
+      "authorization": "Bearer SOMEKEY",
+      "content-length": "957",
+      "content-type": "application/json",
+      "host": "m3x1nb22wd.execute-api.us-west-2.amazonaws.com",
+      "origin": "chrome-extension://aejoelaoggembcahagimdiliamlcdmfm",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "none",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+      "x-amzn-trace-id": "Root=1-5eb6f1da-719002b1e186e39dd5c92920",
+      "x-forwarded-for": "67.180.166.189",
+      "x-forwarded-port": "443",
+      "x-forwarded-proto": "https"
+  },
+  "queryStringParameters": {
+      "myparam": "myvalue"
+  },
+  "requestContext": {
+      "accountId": "487978684662",
+      "apiId": "m3x1nb22wd",
+      "domainName": "m3x1nb22wd.execute-api.us-west-2.amazonaws.com",
+      "domainPrefix": "m3x1nb22wd",
+      "http": {
+          "method": "POST",
+          "path": "/somekey/somedb/somecollection",
+          "protocol": "HTTP/1.1",
+          "sourceIp": "67.180.166.189",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"
+      },
+      "requestId": "MRq6Li-9PHcESrQ=",
+      "routeKey": "POST /{instance}/{db}/{collection}",
+      "stage": "$default",
+      "time": "09/May/2020:18:09:30 +0000",
+      "timeEpoch": 1589047770658
+  },
+  "pathParameters": {
+      "instance": "somekey",
+      "collection": "somecollection",
+      "db": "somedb"
+  },
+  "body": "{\n  \"add\": [\n    [\n      \"rachelw@goalbookapp.com\",\n      \"hannahr@goalbookapp.com\",\n      \"veronical@goalbookapp.com\"\n    ],\n    [\n        \"gracer@goalbookapp.com\",\n        \"paulm@goalbookapp.com\",\n        \"jond@goalbookapp.com\"\n    ],\n    [\n        \"wendyz@goalbookapp.com\",\n        \"jeannette@goalbookapp.com\",\n        \"joannh@goalbookapp.com\"\n    ],\n    [\n        \"chrissyc@goalbookapp.com\",\n        \"paigel@goalbookapp.com\",\n        \"gretchenk@goalbookapp.com\"\n    ],\n    [\n        \"nicks@goalbookapp.com\",\n        \"jillj@goalbookapp.com\",\n        \"joym@goalbookapp.com\"\n    ],\n    [\n        \"oscara@goalbookapp.com\",\n        \"jonm@goalbookapp.com\",\n        \"ryani@goalbookapp.com\"\n    ],\n    [\n        \"kiab@goalbookapp.com\",\n        \"nadiaw@goalbookapp.com\",\n        \"marka@goalbookapp.com\"\n    ],\n    [\n        \"susanw@goalbookapp.com\",\n        \"leylaa@goalbookapp.com\",\n        \"purvad@goalbookapp.com\",\n        \"erikah@goalbookapp.com\"\n    ]\n  ]\n}",
+  "isBase64Encoded": false
+}
