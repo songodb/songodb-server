@@ -1,47 +1,33 @@
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const { v4: uuidv4 } = require('uuid')
-const createSongoS3 = require('@songodb/songodb-s3')
+const createSongoDB = require('@songodb/songodb-mongo-s3')
 const { handler } = require('../lib/handler')
-let s3 = createSongoS3(new AWS.S3(), process.env.BUCKET)
 
 describe('handler', () => {
   let event = null
-  let prefix = `test/insert/handler/`
-  let objects = null
-  beforeAll(async () => {
-    objects = [ 
-      { _id: uuidv4(), name: "obj2", i: 2 }, 
-      { _id: uuidv4(), name: "obj3", i: 3 }, 
-      { _id: uuidv4(), name: "obj1", i: 1 } 
-    ]
-    await s3.putMultiple(objects.map(obj => `${prefix}${obj["_id"]}`), objects)
+  let { collection } = createSongoDB(new AWS.S3(), process.env.BUCKET, { 
+    instanceId: 'collection',
+    dbName: 'find',
+    collectionName: 'find'
   })
-  afterAll(async () => {
-    await s3.deletePrefix(prefix)
+  beforeEach(async () => {
+    await collection.insertMany([ 
+      { _id: "1", first: "Jane", last: "Doe" }, 
+      { _id: "2", first: "John", last: "Doe" },
+      { _id: "3", first: "Joe", last: "Doe" } 
+    ])
+  })
+  afterEach(async () => {
+    await collection.drop() 
   })
   it ('should find using simple query', async () => {
-    let event = createTestEvent({ name: "obj3" })
+    let event = createTestEvent({ first: "John" })
     let response = await handler(event)
     expect(response).toMatchObject({
       statusCode: 200
     })
     let body = JSON.parse(response.body)
-    expect(body.docs).toEqual([ { _id: expect.anything(), name: "obj3", i: 3 } ])
-    expect(body.explain).toMatchObject({
-      executionStats: {
-        nReturned: 1,
-        executionTimeMillis: expect.anything(),
-        totalKeysExamined: 0,
-        totalDocsExamined: 3,
-      },
-      s3: {
-        KeyCount: 3,
-        MaxKeys: 100,
-        NextContinuationToken: null,
-        TimeMillis: expect.anything()
-      }
-    })
+    expect(body.docs).toEqual([ { _id: "2", first: "John", last: "Doe" } ])
   })
   it ('should find all if null query given', async () => {
     let event = createTestEvent()
@@ -51,7 +37,7 @@ describe('handler', () => {
     })
     let body = JSON.parse(response.body)
     expect(body.docs.length).toBe(3)
-    expect(body.docs.map(doc => doc.name).sort()).toEqual([ "obj1", "obj2", "obj3" ])
+    expect(body.docs.map(doc => doc.first).sort()).toEqual([ "Jane", "Joe", "John" ])
   })
   it ('should find all if empty query given', async () => {
     let event = createTestEvent({ })
@@ -61,60 +47,56 @@ describe('handler', () => {
     })
     let body = JSON.parse(response.body)
     expect(body.docs.length).toBe(3)
-    expect(body.docs.map(doc => doc.name).sort()).toEqual([ "obj1", "obj2", "obj3" ])
+    expect(body.docs.map(doc => doc.first).sort()).toEqual([ "Jane", "Joe", "John" ])
   })
   it ('should sort by a single field', async () => {
-    let event = createTestEvent(null, { sort: [ [ "obj", 1 ] ] })
+    let event = createTestEvent(null, { sort: [ [ "first", 1 ] ] })
     let response = await handler(event)
     expect(response).toMatchObject({
       statusCode: 200
     })
     let body = JSON.parse(response.body)
     expect(body.docs.length).toBe(3)
-    expect(body.docs.map(doc => doc.name)).toEqual([ "obj1", "obj2", "obj3" ])
+    expect(body.docs.map(doc => doc.first)).toEqual([ "Jane", "Joe", "John"  ])
   })
   it ('should skip and limit', async () => {
-    let event = createTestEvent(null, { skip: 1, limit: 1, sort: [ [ "name", 1 ] ] })
+    let event = createTestEvent(null, { skip: 1, limit: 1, sort: [ [ "first", 1 ] ] })
     let response = await handler(event)
     expect(response).toMatchObject({
       statusCode: 200
     })
     let body = JSON.parse(response.body)
     expect(body.docs.length).toBe(1)
-    expect(body.docs[0].name).toEqual("obj2")
+    expect(body.docs[0].first).toEqual("Joe")
   })
   it ('should get a single record and skip scan', async () => {
-    let event = createTestEvent({ _id: objects[1]["_id"] })
+    let event = createTestEvent({ _id: "2" })
     let response = await handler(event)
     expect(response).toMatchObject({
       statusCode: 200
     })
     let body = JSON.parse(response.body)
     expect(body.docs.length).toBe(1)
-    expect(body.docs[0]).toEqual(objects[1])
-    expect(body.explain).toMatchObject({
-      executionStats: {
-        nReturned: 1,
-        executionTimeMillis: expect.anything(),
-        totalKeysExamined: 0,
-        totalDocsExamined: 1,
-      },
-      s3: {
-        KeyCount: 1,
-        MaxKeys: 100,
-        NextContinuationToken: null,
-        TimeMillis: expect.anything()
-      }
+    expect(body.docs[0]).toEqual({ _id: "2", first: "John", last: "Doe" })
+  })
+  it ('should return no records if collection does not exist', async () => {
+    let event = createTestEvent()
+    event.pathParameters.collection = 'doesnotexist'
+    let response = await handler(event)
+    expect(response).toMatchObject({
+      statusCode: 200
     })
+    let body = JSON.parse(response.body)
+    expect(body).toMatchObject({ docs: [] })
   })
 })
 
 function createTestEvent(query, options) {
   return {
     "pathParameters": {
-      "instance": "test",
-      "db": "insert",
-      "collection": "handler"
+      "instance": "collection",
+      "db": "find",
+      "collection": "find"
     },
     "stageVariables": {
       "BUCKET": process.env.BUCKET

@@ -1,34 +1,76 @@
 const AWS = require('aws-sdk')
-const createSongoS3 = require('@songodb/songodb-s3')
-const { insertOne, insertMany } = require('./mongo')
+const createSongoDB = require('@songodb/songodb-mongo-s3')
 
 async function handler(event) {
-  normalize(event)
-  let s3 = createSongoS3(new AWS.S3(), event.stageVariables.BUCKET)
-  const instance = event.pathParameters.instance
-  const db = event.pathParameters.db
-  const collection = event.pathParameters.collection
-  let prefix = `${instance}/${db}/${collection}/`
-  let { docs, doc, options } = JSON.parse(event.body)
-  let isOne = doc || docs && !Array.isArray(docs)
-  let body = null
+  let params = null 
   try {
-    if (isOne) {
-      body = await insertOne(s3, prefix, (doc || docs), options)
-    } else {
-      body = await insertMany(s3, prefix, docs, options)
-    }
+    params = validateAndGetParams(event)
+  } catch (err) {
+    console.error(err)
     return {
-      statusCode: 200,
-      body: JSON.stringify(body)
+      statusCode: 400,
+      body: JSON.stringify({ errorMessage: err.message })
+    }
+  }
+  let {
+    instanceId,
+    dbName,
+    collectionName,
+    doc, 
+    docs, 
+    options
+  } = params
+  let { collection } = createSongoDB(new AWS.S3(), event.stageVariables.BUCKET, { instanceId, dbName, collectionName })
+  let result = null
+  try {
+    if (doc) { 
+      result = await collection.insertOne(doc, options)
+    } else {
+      result = await collection.insertMany(docs, options)
     }
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        errorMessage: `Internal Server Error: ${err.message}`
-      })
+    console.error(err)
+    let statusCode = 500
+    if (err.code == "InvalidNamespace") {
+      statusCode = 400
     }
+    return {
+      statusCode,
+      body: JSON.stringify({ errorMessage: err.message })
+    }
+  }
+  return {
+    statusCode: 200,
+    body: JSON.stringify(result)
+  }
+}
+
+function validateAndGetParams(event) {
+  normalize(event)
+  let params = defaultParams()
+  params.instanceId = event.pathParameters.instance
+  params.dbName = event.pathParameters.db
+  params.collectionName = event.pathParameters.collection
+  let { doc, docs, options } = parseJSONParam(event.body) || { }
+  params.doc = doc
+  params.docs = docs
+  params.options = options
+  return params
+}
+
+function defaultParams() {
+  return {
+    filter: null,
+    options: { 
+    }
+  }
+}
+
+function parseJSONParam(str) {
+  try {
+    return str && JSON.parse(str) || null
+  } catch (err) {
+    throw new Error(`Invalid JSON: ${str}`)
   }
 }
 

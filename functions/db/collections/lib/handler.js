@@ -17,25 +17,16 @@ async function handler(event) {
   let {
     instanceId,
     dbName,
-    collectionName,
     filter,
     options
   } = params
-  let { collection } = createSongoDB(new AWS.S3(), event.stageVariables.BUCKET, { instanceId, dbName, collectionName })
+  let { db } = createSongoDB(new AWS.S3(), event.stageVariables.BUCKET, { instanceId, dbName })
   let result = null
   try {
-    if (filter == null) {
-      // no filter arg at all means we drop the collection
-      result = await collection.drop({ 
-        MaxKeys: options.MaxKeys || DEFAULT_MAX_KEYS,
-        ContinuationToken: options.ContinuationToken || null
-      })
-    } else {
-      result = await collection.deleteMany(filter, {
-        MaxKeys: options.MaxKeys || DEFAULT_MAX_KEYS,
-        ContinuationToken: options.ContinuationToken || null
-      })
-    }
+    result = await db.listCollections(filter, { 
+      nameOnly: options.nameOnly, 
+      MaxKeys: options.MaxKeys, 
+      ContinuationToken: options.ContinuationToken })
   } catch (err) {
     console.error(err)
     let statusCode = 500
@@ -58,17 +49,16 @@ function validateAndGetParams(event) {
   let params = defaultParams()
   params.instanceId = event.pathParameters.instance
   params.dbName = event.pathParameters.db
-  params.collectionName = event.pathParameters.collection
-  params.filter = parseJSONParam(event.queryStringParameters.filter) || null
+  params.filter = parseJSONParam(event.queryStringParameters.filter) || { }
   params.options = parseJSONParam(event.queryStringParameters.options) || { }
   return params
 }
 
-function defaultParams() {
-  return {
-    filter: { },
-    options: { }
-  }
+function normalize(event) {
+  event.pathParameters = event.pathParameters || { }
+  event.queryStringParameters = event.queryStringParameters || { }
+  event.stageVariables = event.stageVariables || { }
+  return event
 }
 
 function parseJSONParam(str) {
@@ -79,11 +69,15 @@ function parseJSONParam(str) {
   }
 }
 
-function normalize(event) {
-  event.pathParameters = event.pathParameters || { }
-  event.queryStringParameters = event.queryStringParameters || { }
-  event.stageVariables = event.stageVariables || { }
-  return event
+function defaultParams() {
+  return {
+    filter: null,
+    options: { 
+      nameOnly: false,
+      MaxKeys: DEFAULT_MAX_KEYS,
+      ContinuationToken: null
+    }
+  }
 }
 
 module.exports = exports = {

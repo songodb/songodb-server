@@ -1,5 +1,5 @@
 {
-  "name": "songodb-server-collection-insert",
+  "name": "songodb-server-db-collections",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

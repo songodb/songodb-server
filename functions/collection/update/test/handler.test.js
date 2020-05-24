@@ -1,33 +1,29 @@
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const { v4: uuidv4 } = require('uuid')
-const createSongoS3 = require('@songodb/songodb-s3')
+const createSongoDB = require('@songodb/songodb-mongo-s3')
 const { handler } = require('../lib/handler')
-let s3 = createSongoS3(new AWS.S3(), process.env.BUCKET)
 
 describe('handler', () => {
   let event = null
-  let prefix = `test/update/handler/`
-  let objects = null
+  let { collection } = createSongoDB(new AWS.S3(), process.env.BUCKET, { 
+    instanceId: 'collection',
+    dbName: 'update',
+    collectionName: 'update'
+  })
   beforeEach(async () => {
-    objects = [ 
-      { _id: "2", name: "obj2", i: 2, foo: "bar" }, 
-      { _id: "3", name: "obj3", i: 3, foo: "bar" }, 
-      { _id: "1", name: "obj1", i: 1, foo: "foo" } 
-    ]
-    await s3.putMultiple(objects.map(obj => `${prefix}${obj["_id"]}`), objects)
+    await collection.insertMany([ 
+      { _id: "1", first: "Jane", last: "Doe" }, 
+      { _id: "2", first: "John", last: "Doe" },
+      { _id: "3", first: "Joe", last: "Doe" } 
+    ])
   })
   afterEach(async () => {
-    try { 
-      await s3.deletePrefix(prefix)
-    } catch (err) {
-      console.error(err.message)
-    }
+    await collection.drop() 
   })
   it ('should filter and update multiple records', async () => {
     let event = createTestEvent({ 
-      filter: { "foo": "bar" },
-      update: { "$max": { i: 3 } }
+      filter: { last: "Doe" },
+      update: { "$set": { last: "Smith" } }
     })
     let response = await handler(event)
     expect(response).toMatchObject({
@@ -35,30 +31,16 @@ describe('handler', () => {
     })
     let body = JSON.parse(response.body)
     expect(body).toMatchObject({
-      matchedCount: 2,
-      modifiedCount: 1,
+      matchedCount: 3,
+      modifiedCount: 3,
       upsertedCount: 0,
       upsertedId: null,
-      explain: {
-        executionStats: {
-          nReturned: 1,
-          executionTimeMillis: expect.anything(),
-          totalKeysExamined: 0,
-          totalDocsExamined: 3
-        },
-        s3: {
-          KeyCount: 3,
-          MaxKeys: 100,
-          NextContinuationToken: null,
-          TimeMillis: expect.anything()
-        }
-      }
     })
   })
   it ('should upsert a document', async () => {
     let event = createTestEvent({ 
-      filter: { "name": "obj4" },
-      update: { "$set": { i: 4 } },
+      filter: { "first": "Jill" },
+      update: { "$set": { first: "Jill" } },
       options: { upsert: true }
     })
     let response = await handler(event)
@@ -71,26 +53,12 @@ describe('handler', () => {
       modifiedCount: 0,
       upsertedCount: 1,
       upsertedId: { "_id": expect.anything() },
-      explain: {
-        executionStats: {
-          nReturned: 1,
-          executionTimeMillis: expect.anything(),
-          totalKeysExamined: 0,
-          totalDocsExamined: 3
-        },
-        s3: {
-          KeyCount: 3,
-          MaxKeys: 100,
-          NextContinuationToken: null,
-          TimeMillis: expect.anything()
-        }
-      }
     })
   })
   it ('should replace a single document', async () => {
     let event = createTestEvent({ 
-      filter: { "name": "obj3" },
-      doc: { name: "obj3", i: 3, foo: "foo" }
+      filter: { first: "Joe" },
+      doc: { first: "Joseph", last: "Doe" }
     })
     event.requestContext.http.method = 'PUT'
     let response = await handler(event)
@@ -103,20 +71,24 @@ describe('handler', () => {
       modifiedCount: 1,
       upsertedCount: 0,
       upsertedId: null,
-      explain: {
-        executionStats: {
-          nReturned: 1,
-          executionTimeMillis: expect.anything(),
-          totalKeysExamined: 0,
-          totalDocsExamined: 3
-        },
-        s3: {
-          KeyCount: 3,
-          MaxKeys: 100,
-          NextContinuationToken: null,
-          TimeMillis: expect.anything()
-        }
-      }
+    })
+  })
+  it ('should return no records if collection does not exist', async () => {
+    let event = createTestEvent({ 
+      filter: { first: "Jane" },
+      update: { "$set": { last: "Smith" } }
+    })
+    event.pathParameters.collection = "doesnotexist"
+    let response = await handler(event)
+    expect(response).toMatchObject({
+      statusCode: 200
+    })
+    let body = JSON.parse(response.body)
+    expect(body).toMatchObject({
+      "matchedCount": 0,
+      "modifiedCount": 0,
+      "upsertedCount": 0,
+      "upsertedId": null,
     })
   })
 })
@@ -129,9 +101,9 @@ function createTestEvent(body, options) {
       }
     },
     "pathParameters": {
-      "instance": "test",
+      "instance": "collection",
       "db": "update",
-      "collection": "handler"
+      "collection": "update"
     },
     "stageVariables": {
       "BUCKET": process.env.BUCKET

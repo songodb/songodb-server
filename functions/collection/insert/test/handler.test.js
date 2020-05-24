@@ -1,20 +1,24 @@
 require('dotenv').config()
 const AWS = require('aws-sdk')
-const createSongoS3 = require('@songodb/songodb-s3')
+const createSongoDB = require('@songodb/songodb-mongo-s3')
 const { handler } = require('../lib/handler')
-let s3 = createSongoS3(new AWS.S3(), process.env.BUCKET)
 
 describe('handler', () => {
   let event = null
+  let { collection } = createSongoDB(new AWS.S3(), process.env.BUCKET, { 
+    instanceId: 'collection',
+    dbName: 'insert',
+    collectionName: 'insert'
+  })
   beforeAll(async () => {
+    
   })
   afterAll(async () => {
-    await s3.deletePrefix(`somekey/somedb/somecollection/`)
+    await collection.drop() 
   })
   it ('should insert a single doc', async () => {
     let event = createTestEvent({ doc: { hello: "world" } })
     let response = await handler(event)
-    console.log(JSON.stringify(response, null, 2))
     expect(response).toMatchObject({
       statusCode: 200
     })
@@ -31,7 +35,6 @@ describe('handler', () => {
   it ('should insert multiple docs', async () => {
     let event = createTestEvent({ docs: [ { hello: "world" }, { foo: "bar" } ] })
     let response = await handler(event)
-    console.log(JSON.stringify(response, null, 2))
     expect(response).toMatchObject({
       statusCode: 200
     })
@@ -56,9 +59,9 @@ describe('handler', () => {
 function createTestEvent(body) {
   return {
     "pathParameters": {
-      "instance": "somekey",
-      "db": "somedb",
-      "collection": "somecollection"
+      "instance": "collection",
+      "db": "insert",
+      "collection": "insert"
     },
     "stageVariables": {
       "BUCKET": process.env.BUCKET

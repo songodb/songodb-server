@@ -18,10 +18,7 @@
   },
   "homepage": "https://github.com/songodb/songodb-server#readme",
   "dependencies": {
-    "@songodb/songodb-s3": "^1.0.0",
-    "jessy": "^3.0.0",
-    "sift": "^12.0.1",
-    "uuid": "^3.4.0"
+    "@songodb/songodb-mongo-s3": "^1.0.3"
   },
   "devDependencies": {
     "@funcmaticjs/package": "~0.0.3",

@@ -16,30 +16,16 @@ async function handler(event) {
   }
   let {
     instanceId,
-    dbName,
-    collectionName,
-    method,
     filter,
-    update,
-    doc,
     options
   } = params
-  let { collection } = createSongoDB(new AWS.S3(), event.stageVariables.BUCKET, { instanceId, dbName, collectionName })
+  let { instance } = createSongoDB(new AWS.S3(), event.stageVariables.BUCKET, { instanceId })
   let result = null
   try {
-    if (method == 'PUT') {
-      result = await collection.replaceOne(filter, doc, {
-        upsert: options.upsert || false,
-        MaxKeys: options.MaxKeys || DEFAULT_MAX_KEYS,
-        ContinuationToken: options.ContinuationToken || null
-      })
-    } else {
-      result = await collection.updateMany(filter, update, {
-        upsert: options.upsert || false,
-        MaxKeys: options.MaxKeys || DEFAULT_MAX_KEYS,
-        ContinuationToken: options.ContinuationToken || null
-      })
-    }
+    result = await instance.listDatabases(filter, { 
+      nameOnly: options.nameOnly, 
+      MaxKeys: options.MaxKeys, 
+      ContinuationToken: options.ContinuationToken })
   } catch (err) {
     console.error(err)
     let statusCode = 500
@@ -61,17 +47,19 @@ function validateAndGetParams(event) {
   normalize(event)
   let params = defaultParams()
   params.instanceId = event.pathParameters.instance
-  params.dbName = event.pathParameters.db
-  params.collectionName = event.pathParameters.collection
-  params.method = event.requestContext.http.method || 'PATCH'
-  let body = parseJSONParam(event.body) || { }
-  return Object.assign(params, body)
+  params.filter = parseJSONParam(event.queryStringParameters.filter) 
+  params.options = parseJSONParam(event.queryStringParameters.options) || { }
+  return params
 }
 
 function defaultParams() {
   return {
-    filter: { },
-    options: { }
+    filter: null,
+    options: { 
+      nameOnly: false,
+      MaxKeys: DEFAULT_MAX_KEYS,
+      ContinuationToken: null
+    }
   }
 }
 
